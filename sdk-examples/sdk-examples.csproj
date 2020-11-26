@@ -8,11 +8,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BouncyCastle.NetCore" Version="1.8.5" />
+    <PackageReference Include="BouncyCastle.NetCore" Version="1.8.6" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\dotnet-algorand-sdk\dotnet-algorand-sdk.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="V2\contract\sample.teal">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

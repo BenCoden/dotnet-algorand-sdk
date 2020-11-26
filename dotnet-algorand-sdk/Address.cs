@@ -8,9 +8,9 @@ using System.Collections.Generic;
 
 namespace Algorand
 {
-    /// 
+    /// <summary>
     /// Address represents a serializable 32-byte length Algorand address.
-    /// 
+    /// </summary>
     [JsonConverter(typeof(BytesConverter))]
     public class Address
     {
@@ -39,6 +39,7 @@ namespace Algorand
         {
             if (bytes == null)
             {
+                this.Bytes = new byte[LEN_BYTES];
                 return;
             }
             if (bytes.Length != LEN_BYTES)
@@ -176,16 +177,24 @@ namespace Algorand
     /// <summary>
     /// MultisigAddress is a convenience class for handling multisignature public identities.
     /// </summary>
-    [JsonObject]
+    [JsonConverter(typeof(MultisigAddressConverter))]
     public class MultisigAddress
     {
         //public const int KEY_LEN_BYTES = 32;
+        [JsonProperty]
         public int version;
+        [JsonProperty]
         public int threshold;
+        [JsonProperty]
         public List<Ed25519PublicKeyParameters> publicKeys = new List<Ed25519PublicKeyParameters>();
 
         private static readonly byte[] PREFIX = Encoding.UTF8.GetBytes("MultisigAddr");
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="version"></param>
+        /// <param name="threshold"></param>
+        /// <param name="publicKeys"></param>
         public MultisigAddress(int version, int threshold,
                 List<Ed25519PublicKeyParameters> publicKeys)
         {
@@ -208,6 +217,16 @@ namespace Algorand
             }
         }
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="version"></param>
+        /// <param name="threshold"></param>
+        /// <param name="publicKeys"></param>
+        [JsonConstructor]
+        public MultisigAddress(int version, int threshold, List<byte[]> publicKeys)
+            : this(version, threshold, publicKeys.ConvertAll(key => new Ed25519PublicKeyParameters(key, 0)))
+        { }
+        /// <summary>
         /// building an address object helps us generate string representations
         /// </summary>
         /// <returns>the address</returns>
@@ -226,6 +245,29 @@ namespace Algorand
         public override string ToString()
         {
             return this.ToAddress().ToString();
+        }
+        public override bool Equals(object obj)
+        {
+            if(obj is MultisigAddress mAddress)
+            {
+                if (publicKeys.Count == mAddress.publicKeys.Count) 
+                {
+                    int keyCount = publicKeys.Count;
+                    if (keyCount != 0)                     
+                    {
+                        var publicKeyEqual = true;
+                        for(int i = 0; i < keyCount; i++)
+                        {
+                            publicKeyEqual &= publicKeys[i].Equals(mAddress.publicKeys[i]);
+                            if (!publicKeyEqual) return false;
+                        }
+                    }
+                    return version == mAddress.version && threshold == mAddress.threshold;
+                }
+                else return false;
+                    //return base.Equals(obj);
+            }
+            return false;
         }
     }
 }

@@ -1,6 +1,6 @@
 ﻿using Algorand;
-using Algorand.Algod.Client;
-using Algorand.Algod.Client.Api;
+using Algorand.Client;
+using Algorand.Algod.Api;
 using System;
 
 namespace sdk_examples
@@ -21,7 +21,7 @@ namespace sdk_examples
             //string DEST_ADDR2 = "OAMCXDCH7LIVYUF2HSNQLPENI2ZXCWBSOLUAOITT47E4FAMFGAMI4NFLYU";
             Account src = new Account(SRC_ACCOUNT);
             var algodApiInstance = new AlgodApi(ALGOD_API_ADDR, ALGOD_API_TOKEN);
-            Algorand.Algod.Client.Model.TransactionParams transParams = null;
+            Algorand.Algod.Model.TransactionParams transParams = null;
             try
             {
                 transParams = algodApiInstance.TransactionParams();
@@ -35,7 +35,9 @@ namespace sdk_examples
 
             LogicsigSignature lsig = new LogicsigSignature(program, null);
             Console.WriteLine("Escrow address: " + lsig.ToAddress().ToString());
-            Transaction tx = Utils.GetLogicSignatureTransaction(lsig, new Address(DEST_ADDR), transParams, "logic sig message");
+
+            var tx = Utils.GetPaymentTransaction(lsig.ToAddress(), src.Address, 100000, "draw algo from contract", transParams);
+           
             if (!lsig.Verify(tx.sender))
             {
                 string msg = "Verification failed";

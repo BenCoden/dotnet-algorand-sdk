@@ -1,13 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using Algorand;
 using Account = Algorand.Account;
-using Algorand.Algod.Client.Api;
-using Algorand.Algod.Client.Model;
-using Algorand.Algod.Client;
-using Transaction = Algorand.Transaction;
+using Algorand.Algod.Api;
+using Algorand.Algod.Model;
+using Algorand.Client;
 using System.Text;
-using Org.BouncyCastle.Crypto.Parameters;
 
 namespace sdk_examples
 {
@@ -15,10 +12,21 @@ namespace sdk_examples
     {
         static void Main(string[] args)
         {
+            //V2.BasicExample.Main(args); return;
+            //V2.AssetExample.Main(args); return;
+            //V2.AtomicTransferExample.Main(args); return;
+            //V2.contract.CompileTeal.Main(args); return;
+            //V2.contract.ContractAccount.Main(args); return;
+            //V2.contract.LogicSignature.Main(args); return;
+            V2.contract.DryrunDedugging.Main(args); return;
+            //V2.IndexerExamples.Main(args); return;
+
+
             //AssetExample.Main(args); return;
             //BidExample.Main(args); return;
             //GroupSigExample.Main(args); return;
-            LogicSigExample.Main(args); return;
+            //LogicSigExample.Main(args); return;
+
             //MultisigExample.Main(args); return;
 
             // the SDK also support purestake, just use the two lines below replace the line 28~32
@@ -63,6 +71,19 @@ namespace sdk_examples
                 Console.WriteLine("Exception when calling algod#getSupply:" + e.Message);
             }
 
+            try
+            {
+                TransactionParams trans = algodApiInstance.TransactionParams();
+                var lr = (long?)trans.LastRound;
+                Block block = algodApiInstance.GetBlock((long?)trans.LastRound);
+                Console.WriteLine("Lastround: " + trans.LastRound.ToString());
+                Console.WriteLine("Block txns: " + block.Txns.ToJson());
+            }
+            catch (ApiException e)
+            {
+                Console.WriteLine("Exception when calling algod#getSupply:" + e.Message);
+            }     
+
             TransactionParams transParams = null;
             try
             {
@@ -84,12 +105,14 @@ namespace sdk_examples
             {
                 var id = Utils.SubmitTransaction(algodApiInstance, signedTx);
                 Console.WriteLine("Successfully sent tx with id: " + id.TxId);
+                Console.WriteLine(Utils.WaitTransactionToComplete(algodApiInstance, id.TxId));
             }
             catch (ApiException e)
             {
                 // This is generally expected, but should give us an informative error message.
                 Console.WriteLine("Exception when calling algod#rawTransaction: " + e.Message);
             }
+
             Console.WriteLine("You have successefully arrived the end of this test, please press and key to exist.");
             Console.ReadKey();
         }

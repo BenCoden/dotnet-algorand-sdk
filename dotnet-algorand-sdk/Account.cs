@@ -13,9 +13,9 @@ using System.Linq;
 
 namespace Algorand
 {
-    ///
+    /// <summary>
     /// Create and manage secrets, and perform account-based work such as signing transactions.
-    ///
+    /// </summary>
     public class Account
     {
         private AsymmetricCipherKeyPair privateKeyPair;
@@ -26,6 +26,7 @@ namespace Algorand
         private static readonly byte[] BID_SIGN_PREFIX = Encoding.UTF8.GetBytes("aB");
         private static readonly byte[] BYTES_SIGN_PREFIX = Encoding.UTF8.GetBytes("MX");
         private const ulong MIN_TX_FEE_UALGOS = 1000;
+        private static readonly byte[] PROGDATA_SIGN_PREFIX = Encoding.UTF8.GetBytes("ProgData");
 
         /// <summary>
         /// Generate a newc account, random account.
@@ -110,7 +111,10 @@ namespace Algorand
         {
             byte[] prefixEncodedTx = tx.BytesToSign();
             Signature txSig = RawSignBytes(prefixEncodedTx);
-            return new SignedTransaction(tx, txSig, tx.TxID());
+            var stx = new SignedTransaction(tx, txSig, tx.TxID());
+            if (!tx.sender.Equals(this.Address))
+                stx.authAddr = this.Address;
+            return stx;
         }
         /// <summary>
         /// Sign a transaction with this account, replacing the fee with the given feePerByte.
@@ -159,7 +163,8 @@ namespace Algorand
         public static int EstimatedEncodedSize(Transaction tx)
         {
             Account acc = new Account();
-            return Encoder.EncodeToMsgPack(acc.SignTransaction(tx)).Length;
+            return Encoder.EncodeToMsgPack(
+                new SignedTransaction(tx, acc.RawSignBytes(tx.BytesToSign()), tx.TxID())).Length;
         }
         /// <summary>
         /// Sign the given bytes, and wrap in Signature.
@@ -280,10 +285,38 @@ namespace Algorand
         /// <param name="from">the multisig public identity we are signing for</param>
         /// <param name="signedTx">the partially signed msig tx to which to append signature</param>
         /// <returns>merged multisig transaction</returns>
-        public SignedTransaction AppendMultisigTransaction(MultisigAddress from, SignedTransaction signedTx) //throws NoSuchAlgorithmException
+        public SignedTransaction AppendMultisigTransaction(MultisigAddress from, SignedTransaction signedTx)
         {
             SignedTransaction sTx = this.SignMultisigTransaction(from, signedTx.tx);
             return MergeMultisigTransactions(sTx, signedTx);
+        }
+
+        /// <summary>
+        /// a convenience method for working directly with raw transaction files.
+        /// </summary>
+        /// <param name="txsBytes">list of multisig transactions to merge</param>
+        /// <returns>an encoded, merged multisignature transaction</returns>
+        public static byte[] MergeMultisigTransactionBytes(params byte[][] txsBytes)
+        {
+
+            SignedTransaction[] sTxs = new SignedTransaction[txsBytes.Length];
+            for (int i = 0; i < txsBytes.Length; i++) {
+                sTxs[i] = Encoder.DecodeFromMsgPack<SignedTransaction>(txsBytes[i]);
+            }
+            SignedTransaction merged = Account.MergeMultisigTransactions(sTxs);
+            return Encoder.EncodeToMsgPack(merged);
+        }
+        /// <summary>
+        /// a convenience method for directly appending our signature to a raw tx file
+        /// </summary>
+        /// <param name="from">the public identity we are signing as</param>
+        /// <param name="txBytes">the multisig transaction to append signature to</param>
+        /// <returns>merged multisignature transaction inclukding our signature</returns>
+        public byte[] AppendMultisigTransactionBytes(MultisigAddress from, byte[] txBytes)
+        {
+            SignedTransaction inTx = Encoder.DecodeFromMsgPack<SignedTransaction>(txBytes);
+            SignedTransaction appended = this.AppendMultisigTransaction(from, inTx);
+            return Encoder.EncodeToMsgPack(appended);
         }
         #endregion
 
@@ -384,8 +417,42 @@ namespace Algorand
             }
             return new SignedTransaction(tx, lsig, tx.TxID());
         }
-        #endregion        
-    }
+
+        //public static SignedTransaction SignLogicsigDelegatedTransaction(LogicsigSignature lsig, Transaction tx)
+        //{
+
+        //    return new SignedTransaction(tx, lsig, tx.TxID());
+        //}
+        #endregion
+
+        /// <summary>
+        /// Creates Signature compatible with ed25519verify TEAL opcode from data and contract address(program hash).
+        /// </summary>
+        /// <param name="data">data byte[]</param>
+        /// <param name="contractAddress">contractAddress Address</param>
+        /// <returns>Signature</returns>
+        public Signature TealSign(byte[] data, Address contractAddress)
+        {
+            byte[] rawAddress = contractAddress.Bytes;
+            List<byte> baos = new List<byte>();
+            baos.AddRange(PROGDATA_SIGN_PREFIX);
+            baos.AddRange(rawAddress);
+            baos.AddRange(data);
+            return this.RawSignBytes(baos.ToArray());
+        }
+
+        /// <summary>
+        /// Creates Signature compatible with ed25519verify TEAL opcode from data and program bytes
+        /// </summary>
+        /// <param name="data">data byte[]</param>
+        /// <param name="program">program byte[]</param>
+        /// <returns>Signature</returns>
+        public Signature TealSignFromProgram(byte[] data, byte[] program)
+        {
+            LogicsigSignature lsig = new LogicsigSignature(program);
+            return this.TealSign(data, lsig.Address);
+        }
+}
 
     // Return a pre-set seed in response to nextBytes or generateSeed
     class FixedSecureRandom : SecureRandom

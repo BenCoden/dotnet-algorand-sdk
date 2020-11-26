@@ -21,6 +21,7 @@ namespace Algorand
         {
             if (bytes == null)
             {
+                Bytes = new byte[DIG_LEN_BYTES];
                 return;
             }
             if (bytes.Length != DIG_LEN_BYTES)
@@ -36,7 +37,11 @@ namespace Algorand
         {
             Bytes = new byte[DIG_LEN_BYTES];
         }
-
+        /// <summary>
+        /// Create a new digest from a base64 encoded string.
+        /// </summary>
+        /// <param name="base64String">base64 encoded string</param>
+        public Digest(string base64String) : this(Convert.FromBase64String(base64String)) { }
         public override bool Equals(object obj)
         {
             if (obj is Digest && Enumerable.SequenceEqual(this.Bytes, ((Digest)obj).Bytes)) {
@@ -48,6 +53,10 @@ namespace Algorand
         public override int GetHashCode()
         {
             return this.Bytes.GetHashCode();
+        }
+        public override string ToString()
+        {
+            return Convert.ToBase64String(Bytes);
         }
     }    
 }

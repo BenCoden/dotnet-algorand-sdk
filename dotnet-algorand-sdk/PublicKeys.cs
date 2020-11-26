@@ -4,18 +4,24 @@ using Newtonsoft.Json;
 
 namespace Algorand
 {
+    /// <summary>
+    /// A serializable class representing a participation key.
+    /// </summary>
     [JsonConverter(typeof(BytesConverter))]
     public class ParticipationPublicKey
     {
         private const int KEY_LEN_BYTES = 32;
         public byte[] Bytes { get; private set; }
-
+        /// <summary>
+        /// Create a new participation key
+        /// </summary>
+        /// <param name="bytes">a length 32 byte array</param>
         [JsonConstructor]
         public ParticipationPublicKey(byte[] bytes)
         {
             if (bytes != null)
             {
-                if (bytes.Length != 32)
+                if (bytes.Length != KEY_LEN_BYTES)
                 {
                     throw new ArgumentException("participation key wrong length");
                 }
@@ -23,12 +29,15 @@ namespace Algorand
                 {
                     this.Bytes = bytes;
                 }
-            }
-        }
+            }else this.Bytes = new byte[KEY_LEN_BYTES];
 
+        }
+        /// <summary>
+        /// default values for serializer to ignore
+        /// </summary>
         public ParticipationPublicKey()
         {
-            this.Bytes = new byte[32];
+            this.Bytes = new byte[KEY_LEN_BYTES];
         }
 
         public override bool Equals(object obj)
@@ -52,7 +61,7 @@ namespace Algorand
         {
             if (bytes != null)
             {
-                if (bytes.Length != 32)
+                if (bytes.Length != KEY_LEN_BYTES)
                 {
                     throw new ArgumentException("vrf key wrong length");
                 }
@@ -61,11 +70,13 @@ namespace Algorand
                     this.Bytes = bytes;
                 }
             }
+            else
+                Bytes = new byte[KEY_LEN_BYTES];
         }
 
         public VRFPublicKey()
         {
-            Bytes = new byte[32];
+            Bytes = new byte[KEY_LEN_BYTES];
         }
         public override bool Equals(Object obj)
         {
